@@ -252,15 +252,20 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		fi
 	fi
 	read -n1 -r -p "Press any key to continue..."
-	# If running inside a container, disable LimitNPROC to prevent conflicts
-	if systemd-detect-virt -cq; then
-		mkdir /etc/systemd/system/openvpn-server@server.service.d/ 2>/dev/null
-		echo "[Service]
-LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disable-limitnproc.conf
+	if [[ ! "$os" = "openwrt" ]]; then
+		# If running inside a container, disable LimitNPROC to prevent conflicts
+		if systemd-detect-virt -cq; then
+			mkdir /etc/systemd/system/openvpn-server@server.service.d/ 2>/dev/null
+			echo "[Service]
+	LimitNPROC=infinity" > /etc/systemd/system/openvpn-server@server.service.d/disable-limitnproc.conf
+		fi
 	fi
 	if [[ "$os" = "debian" || "$os" = "ubuntu" ]]; then
 		apt-get update
 		apt-get install -y openvpn openssl ca-certificates $firewall
+	elif [[ "$os" = "openwrt" ]]; then
+		opkg update
+		opkg install -y openvpn-openssl ca-certificates tar $firewall
 	elif [[ "$os" = "centos" ]]; then
 		yum install -y epel-release
 		yum install -y openvpn openssl ca-certificates tar $firewall
