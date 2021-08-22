@@ -38,9 +38,13 @@ elif [[ -e /etc/fedora-release ]]; then
 	os="fedora"
 	os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
 	group_name="nobody"
+elif [[ -e /etc/openwrt_version ]]; then
+	os="openwrt"
+	os_version=$(grep -oE '[0-9]+' /etc/openwrt_version | head -1)
+	group_name="nogroup"
 else
 	echo "This installer seems to be running on an unsupported distribution.
-Supported distributions are Ubuntu, Debian, CentOS, and Fedora."
+Supported distributions are Ubuntu, Debian, CentOS, Fedora, and OpenWrt."
 	exit
 fi
 
