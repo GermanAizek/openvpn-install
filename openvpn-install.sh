@@ -150,7 +150,11 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		echo
 		echo "This server is behind NAT. What is the public IPv4 address or hostname?"
 		# Get public IP and sanitize with grep
-		get_public_ip=$(grep -m 1 -oE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' <<< "$(wget -T 10 -t 1 -4qO- "http://ip1.dynupdate.no-ip.com/" || curl -m 10 -4Ls "http://ip1.dynupdate.no-ip.com/")")
+		if [[ "$os" == "openwrt" ]]; then
+			get_public_ip=$(grep -m 1 -oE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' <<< "$(wget -T 10 -4qO- "http://ip1.dynupdate.no-ip.com/")")
+		else
+			get_public_ip=$(grep -m 1 -oE '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' <<< "$(wget -T 10 -t 1 -4qO- "http://ip1.dynupdate.no-ip.com/" || curl -m 10 -4Ls "http://ip1.dynupdate.no-ip.com/")")
+		fi
 		read -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
 		# If the checkip service is unavailable and user didn't provide input, ask again
 		until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
@@ -224,13 +228,25 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 	echo
 	echo "OpenVPN installation is ready to begin."
 	# Install a firewall in the rare case where one is not already available
-	if ! systemctl is-active --quiet firewalld.service && ! hash iptables 2>/dev/null; then
+	if ! ( hash systemctl ) 2>/dev/null && ! ( hash iptables ) 2>/dev/null; then
+		if ! ( systemctl is-active --quiet firewalld.service); then
+			if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
+				firewall="firewalld"
+				# We don't want to silently enable firewalld, so we give a subtle warning
+				# If the user continues, firewalld will be installed and enabled during setup
+				echo "firewalld, which is required to manage routing tables, will also be installed."
+			elif [[ "$os" == "debian" || "$os" == "ubuntu" || "$os" == "openwrt" ]]; then
+				# iptables is way less invasive than firewalld so no warning is given
+				firewall="iptables"
+			fi
+		fi
+	elif ! ( hash service ) 2>/dev/null && ! ( hash iptables ) 2>/dev/null; then
 		if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
 			firewall="firewalld"
 			# We don't want to silently enable firewalld, so we give a subtle warning
 			# If the user continues, firewalld will be installed and enabled during setup
 			echo "firewalld, which is required to manage routing tables, will also be installed."
-		elif [[ "$os" == "debian" || "$os" == "ubuntu" ]]; then
+		elif [[ "$os" == "debian" || "$os" == "ubuntu" || "$os" == "openwrt" ]]; then
 			# iptables is way less invasive than firewalld so no warning is given
 			firewall="iptables"
 		fi
