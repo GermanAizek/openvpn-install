@@ -111,6 +111,23 @@ if [[ ! -e /etc/openvpn/server/server.conf ]]; then
 		apt-get install -y wget
 	fi
 	clear
+	# Detect some OpenWrt minimal setups
+	if [[ "$os" == "openwrt" ]]; then
+		if ! ( hash wget ) 2>/dev/null && ! ( hash curl ) 2>/dev/null; then
+			echo "Wget is required to use this installer."
+			read -n1 -r -p "Press any key to install Wget and continue..."
+			opkg update
+			opkg install -y wget
+		fi
+		clear
+		if ! ( hash nl ) 2>/dev/null; then
+			echo "GNU nl utility is required to use this installer."
+			read -n1 -r -p "Press any key to install GNU nl utility and continue..."
+			opkg update
+			opkg install -y coreutils-nl
+		fi
+	fi
+	clear
 	echo 'Welcome to this OpenVPN road warrior installer!'
 	# If system has a single IPv4, it is selected automatically. Else, ask the user
 	if [[ $(ip -4 addr | grep inet | grep -vEc '127(\.[0-9]{1,3}){3}') -eq 1 ]]; then
